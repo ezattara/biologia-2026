@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plan 2026 — Licenciatura en Ciencias Biológicas (CRUB - UNCo)</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Banner de Modo Demo (se oculta automáticamente al conectar Supabase) -->
+  <div id="demo-banner" class="demo-banner hidden">
+    <div class="demo-banner-inner">
+      <span>
+        <strong>Modo Demo Local:</strong> Los datos se guardan en este navegador. Para la consulta real con Google Sign-In, configurá <code>web/config.js</code> siguiendo <code>SUPABASE_SETUP.md</code>.
+      </span>
+      <div class="demo-quick-actions">
+        <button id="btn-demo-prof" class="btn btn-xs btn-outline-light">Probar como Docente</button>
+        <button id="btn-demo-coord" class="btn btn-xs btn-warning">Probar como Coordinación</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Encabezado principal -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-badge">UNCo · CRUB</div>
+        <div>
+          <h1>Licenciatura en Ciencias Biológicas — Plan 2026</h1>
+          <p class="brand-sub">Visualizador Curricular Interactivo y Consulta Docente</p>
+        </div>
+      </div>
+
+      <div class="auth-area" id="auth-area">
+        <!-- Se renderiza dinámicamente según sesión -->
+      </div>
+    </div>
+
+    <!-- Navegación principal -->
+    <nav class="main-nav" aria-label="Secciones principales">
+      <div class="nav-inner">
+        <button class="nav-tab active" data-tab="curriculum">
+          Diagrama y Plan de Estudios
+        </button>
+        <button class="nav-tab" data-tab="my-interests">
+          Mi Consulta Docente
+          <span id="my-interests-badge" class="badge badge-pill hidden">0</span>
+        </button>
+        <button id="tab-coordinator" class="nav-tab hidden" data-tab="coordinator">
+          Consolidado Coordinación
+          <span class="badge badge-coord">Comisión</span>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="app-main">
+    <!-- ==================== SECCIÓN 1: PLAN Y DIAGRAMA ==================== -->
+    <section id="view-curriculum" class="tab-view active">
+      <!-- Barra de controles -->
+      <div class="controls-bar card">
+        <div class="controls-row">
+          <div class="track-selector" role="group" aria-label="Seleccionar trayecto o titulación">
+            <button class="track-btn active" data-track="licenciatura">Licenciatura (35 + Inglés)</button>
+            <button class="track-btn" data-track="bachiller">Bachiller (22 + Inglés)</button>
+            <button class="track-btn" data-track="tec_lab">Téc. Laboratorio</button>
+            <button class="track-btn" data-track="tec_biodiv">Téc. Biodiversidad</button>
+            <button class="track-btn" data-track="all">Todos (41)</button>
+          </div>
+
+          <div class="view-actions">
+            <div class="search-box">
+              <input
+                type="search"
+                id="course-search"
+                placeholder="Buscar asignatura o contenido mínimo..."
+                aria-label="Buscar asignatura o contenido mínimo"
+              />
+            </div>
+            <div class="view-toggle" role="group" aria-label="Modo de visualización">
+              <button id="btn-view-diagram" class="toggle-btn active">Diagrama</button>
+              <button id="btn-view-table" class="toggle-btn">Tabla</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Información del título seleccionado + Leyenda -->
+        <div class="track-summary-row">
+          <div id="track-info-text" class="track-info-text"></div>
+          <div id="diagram-legend" class="diagram-legend">
+            <span class="legend-item"><span class="dot dot-selected"></span>Seleccionada</span>
+            <span class="legend-item"><span class="dot dot-prereq"></span>Correlativa previa</span>
+            <span class="legend-item"><span class="dot dot-unlock"></span>Habilita cursado</span>
+            <span class="legend-item"><span class="line-solid"></span>Aprobada p/ cursar</span>
+            <span class="legend-item"><span class="line-dashed"></span>Regularizada p/ cursar</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aviso de interacción en diagrama -->
+      <div id="diagram-hint" class="diagram-hint">
+        <span>💡 Hacé clic sobre una asignatura para resaltar sus correlatividades (qué requiere y qué habilita), o hacé clic en <strong>"Ver detalles / Postularme"</strong> para abrir los contenidos mínimos y expresar tu interés.</span>
+        <button id="btn-clear-selection" class="btn btn-xs btn-ghost hidden">Limpiar selección</button>
+      </div>
+
+      <!-- Vista Diagrama Interactivo -->
+      <div id="diagram-container" class="diagram-wrapper card">
+        <svg id="correlativity-svg" class="correlativity-svg" aria-hidden="true"></svg>
+        <div id="diagram-grid" class="diagram-grid">
+          <!-- Renderizado dinámicamente por app.js -->
+        </div>
+      </div>
+
+      <!-- Vista Tabla -->
+      <div id="table-container" class="table-wrapper card hidden">
+        <div class="table-scroll">
+          <table class="plan-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Año</th>
+                <th>Cuat.</th>
+                <th>Espacio Curricular</th>
+                <th>IP (hs)</th>
+                <th>TAE (hs)</th>
+                <th>TTE (hs)</th>
+                <th>CRE</th>
+                <th>Aprob. p/ cursar</th>
+                <th>Reg. p/ cursar</th>
+                <th>Mi interés</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="plan-table-body">
+              <!-- Renderizado dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SECCIÓN 2: MI CONSULTA DOCENTE ==================== -->
+    <section id="view-my-interests" class="tab-view">
+      <div id="my-interests-unauth" class="card empty-state hidden">
+        <h2>Iniciá sesión para registrar o editar tu postulación</h2>
+        <p>
+          Cada docente puede ver y editar únicamente sus propias respuestas. Sólo la coordinación de carrera y miembros de la comisión de implementación tienen acceso al consolidado general.
+        </p>
+        <div id="unauth-actions" class="unauth-actions"></div>
+      </div>
+
+      <div id="my-interests-auth" class="my-interests-layout hidden">
+        <!-- Perfil del docente -->
+        <div class="card profile-card">
+          <div class="card-header">
+            <h2>Mis Datos Docentes</h2>
+            <span id="profile-save-status" class="save-status"></span>
+          </div>
+          <form id="profile-form" class="form-grid">
+            <div class="form-field">
+              <label for="prof-name">Apellido y Nombre *</label>
+              <input type="text" id="prof-name" required placeholder="Ej: Dra. María Gómez" />
+            </div>
+            <div class="form-field">
+              <label for="prof-email">Correo electrónico</label>
+              <input type="email" id="prof-email" disabled />
+            </div>
+            <div class="form-field">
+              <label for="prof-dept">Departamento / Área</label>
+              <select id="prof-dept">
+                <option value="">Seleccionar...</option>
+                <option value="Depto. Biología General">Depto. Biología General</option>
+                <option value="Depto. Botánica">Depto. Botánica</option>
+                <option value="Depto. Ecología">Depto. Ecología</option>
+                <option value="Depto. Zoología">Depto. Zoología</option>
+                <option value="Del. Dept. Química">Del. Dept. Química</option>
+                <option value="Del. Dept. Matemática">Del. Dept. Matemática</option>
+                <option value="Del. Dept. Física">Del. Dept. Física</option>
+                <option value="Del. Dept. Didáctica">Del. Dept. Didáctica</option>
+                <option value="Otro / Externo">Otro / Externo</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="prof-position">Cargo / Dedicación actual (opcional)</label>
+              <input type="text" id="prof-position" placeholder="Ej: Prof. Adjunto / JTP / Ayudante" />
+            </div>
+            <div class="form-field form-full">
+              <label for="prof-current-courses">Asignatura(s) actual(es) en el Plan 1249/2013 (opcional)</label>
+              <input type="text" id="prof-current-courses" placeholder="Ej: Biología General, Ecología General..." />
+            </div>
+            <div class="form-field form-full">
+              <label for="prof-notes">Observaciones generales / disponibilidad (opcional)</label>
+              <textarea id="prof-notes" rows="2" placeholder="Comentarios generales para la comisión de implementación..."></textarea>
+            </div>
+            <div class="form-actions form-full">
+              <button type="submit" class="btn btn-primary">Guardar mis datos</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Mis asignaturas seleccionadas -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Asignaturas en las que expresé interés</h2>
+              <p class="muted">Podés agregar más asignaturas desde el Diagrama o usando el selector rápido.</p>
+            </div>
+            <button id="btn-go-diagram" class="btn btn-outline">+ Explorar en Diagrama</button>
+          </div>
+
+          <!-- Selector rápido -->
+          <div class="quick-add-box">
+            <select id="quick-add-course" aria-label="Seleccionar asignatura para postularse">
+              <option value="">Seleccionar una asignatura para agregar...</option>
+            </select>
+            <button id="btn-quick-add" class="btn btn-secondary">Abrir / Postularme</button>
+          </div>
+
+          <div id="my-interests-list" class="interests-list">
+            <!-- Renderizado dinámicamente -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SECCIÓN 3: CONSOLIDADO COORDINACIÓN ==================== -->
+    <section id="view-coordinator" class="tab-view">
+      <div class="card coord-header-card">
+        <div>
+          <h2>Panel Consolidado — Coordinación / Comisión de Implementación</h2>
+          <p class="muted">Vista restringida. Muestra todas las postulaciones registradas por los docentes.</p>
+        </div>
+        <div class="coord-actions">
+          <button id="btn-refresh-coord" class="btn btn-outline">Actualizar</button>
+          <button id="btn-export-csv" class="btn btn-primary">Exportar CSV</button>
+          <button id="btn-export-tsv" class="btn btn-secondary">Exportar TSV</button>
+        </div>
+      </div>
+
+      <!-- Estadísticas -->
+      <div id="coord-stats" class="stats-grid"></div>
+
+      <!-- Filtros del consolidado -->
+      <div class="card coord-filters">
+        <div class="controls-row">
+          <div class="view-toggle" role="group">
+            <button id="btn-coord-by-course" class="toggle-btn active">Por Asignatura</button>
+            <button id="btn-coord-by-prof" class="toggle-btn">Por Docente</button>
+          </div>
+          <div class="coord-filter-inputs">
+            <select id="coord-filter-status">
+              <option value="all">Todas las asignaturas</option>
+              <option value="no-charge">Sin docente a cargo postulado</option>
+              <option value="no-interest">Sin ningún interesado</option>
+              <option value="with-interest">Con al menos un interesado</option>
+            </select>
+            <input type="search" id="coord-search" placeholder="Filtrar por asignatura o docente..." />
+          </div>
+        </div>
+      </div>
+
+      <div id="coord-content" class="coord-content">
+        <!-- Renderizado dinámicamente -->
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== MODAL DE DETALLE DE ASIGNATURA ==================== -->
+  <div id="course-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-course-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <div id="modal-course-badges" class="modal-badges"></div>
+          <h2 id="modal-course-title"></h2>
+        </div>
+        <button id="btn-close-modal" class="btn-icon" aria-label="Cerrar detalle">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Carga horaria -->
+        <div id="modal-hours-grid" class="hours-grid"></div>
+
+        <!-- Correlatividades -->
+        <div class="modal-section">
+          <h3>Correlatividades y Requisitos</h3>
+          <div id="modal-correlatives" class="correlatives-detail"></div>
+        </div>
+
+        <!-- Postulación del docente -->
+        <div class="modal-section interest-box">
+          <h3>Expresar interés docente en esta asignatura</h3>
+          <div id="modal-interest-content">
+            <!-- Renderizado dinámicamente según sesión -->
+          </div>
+        </div>
+
+        <!-- Contenidos Mínimos -->
+        <div class="modal-section">
+          <h3>Contenidos Mínimos</h3>
+          <p id="modal-contenidos" class="text-block"></p>
+        </div>
+
+        <!-- Fundamentación y Objetivos -->
+        <div class="modal-section">
+          <h3>Fundamentación</h3>
+          <p id="modal-fundamentacion" class="text-block"></p>
+        </div>
+
+        <div class="modal-section">
+          <h3>Objetivos</h3>
+          <ul id="modal-objetivos" class="objectives-list"></ul>
+        </div>
+
+        <!-- Articulación y Equivalencias -->
+        <div class="modal-section two-col-info">
+          <div>
+            <h3>Articulación</h3>
+            <p id="modal-articulacion" class="text-block muted-block"></p>
+          </div>
+          <div>
+            <h3>Equivalencia Plan 1249/2013</h3>
+            <p id="modal-equivalencia" class="text-block muted-block"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Login Demo (solo en modo demo) -->
+  <div id="demo-login-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-header">
+        <h2>Acceso en Modo Demo</h2>
+        <button id="btn-close-demo-modal" class="btn-icon">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="demo-login-form" class="form-grid">
+          <div class="form-field form-full">
+            <label for="demo-login-name">Nombre y Apellido</label>
+            <input type="text" id="demo-login-name" required value="Dra. Laura Sánchez" />
+          </div>
+          <div class="form-field form-full">
+            <label for="demo-login-email">Email institucional</label>
+            <input type="email" id="demo-login-email" required value="l.sanchez@crub.uncoma.edu.ar" />
+          </div>
+          <div class="form-field form-full">
+            <label class="checkbox-label">
+              <input type="checkbox" id="demo-login-coord" />
+              <span>Ingresar como Coordinación / Comisión de Implementación</span>
+            </label>
+          </div>
+          <div class="form-actions form-full">
+            <button type="submit" class="btn btn-primary">Ingresar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
